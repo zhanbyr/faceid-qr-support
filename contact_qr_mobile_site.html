@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FaceID поддержка</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--accent:#18a66a}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto;background:var(--bg);color:var(--text)}
+.container{max-width:520px;margin:auto;padding:20px}
+.card{background:var(--card);padding:22px;border-radius:16px;box-shadow:0 10px 25px rgba(0,0,0,0.4)}
+.header{position:relative;text-align:center}
+.header button{position:absolute;right:0;top:0;background:none;border:none;color:white;font-size:22px;cursor:pointer}
+.sub{font-size:12px;opacity:.7;text-align:center;margin-top:4px}
+.step{margin-top:20px}
+.buttons{display:flex;flex-direction:column;gap:12px;margin-top:15px}
+.bigbtn{padding:18px;border:none;border-radius:14px;font-size:17px;font-weight:600;cursor:pointer;background:#334155;color:white}
+input,textarea{width:100%;padding:12px;border-radius:10px;border:none;margin-top:10px;font-size:15px}
+textarea{min-height:120px;resize:none}
+.contactButtons{display:flex;flex-direction:column;gap:10px;margin-top:15px}
+.contact{padding:16px;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;background:#18a66a;color:white}
+.hidden{display:none}
+.bubble{background:#020617;padding:14px;border-radius:12px;margin-top:14px;font-size:14px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal.hidden{display:none}
+.modalCard{background:#1e293b;padding:20px;border-radius:14px;max-width:420px}
+.modalCard button{margin-top:15px;padding:12px 16px;border:none;border-radius:10px;background:#18a66a;color:white;font-weight:600;cursor:pointer}
+.photoBox{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.photoBtn{padding:12px;border:none;border-radius:10px;background:#334155;color:white;font-size:14px;cursor:pointer}
+.photoPreview{margin-top:10px;max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+
+<div class="container">
+<div class="card">
+
+<div class="header">
+<h1 style="margin:0">FaceID поддержка</h1>
+<button onclick="openInstruction()">ℹ</button>
+</div>
+<div class="sub">Нажмите ℹ чтобы снова открыть инструкцию</div>
+
+<div id="step1" class="step">
+<div><b>Кто вы?</b></div>
+<div class="buttons">
+<button class="bigbtn" onclick="selectUser('new')">Я новенький</button>
+<button class="bigbtn" onclick="selectUser('staff')">Я сотрудник</button>
+</div>
+</div>
+
+<div id="formStep" class="step hidden">
+
+<label>ФИО</label>
+<input id="fio" placeholder="Введите полное ФИО">
+
+<div>
+<label>Подразделение</label>
+<input id="department" placeholder="Например: кассовый узел">
+</div>
+
+<div class="bubble">Сообщение можно изменить перед отправкой</div>
+
+<textarea id="message"></textarea>
+
+<div class="photoBox">
+<label>Фото для FaceID</label>
+
+<button class="photoBtn" onclick="triggerPhoto(true)">📷 Сделать фото</button>
+<button class="photoBtn" onclick="triggerPhoto(false)">🖼 Прикрепить фото</button>
+
+<input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
+<input type="file" id="fileInput" accept="image/*" class="hidden">
+
+<img id="preview" class="photoPreview hidden">
+<button id="removePhoto" class="photoBtn hidden" onclick="removePhoto()">✖ Удалить / переснять фото</button>
+</div>
+
+<div class="contactButtons">
+<button class="contact" onclick="sendEmail()">📧 Написать на почту</button>
+<button class="contact" onclick="openSupport()">💬 Написать в поддержку FaceID</button>
+<button class="contact" onclick="resetForm()">↺ Начать заново</button>
+</div>
+
+</div>
+
+</div>
+</div>
+
+<div id="photoInstruction" class="modal hidden">
+<div class="modalCard">
+<h3>Как сделать фото для FaceID</h3>
+<p>
+(Плейсхолдер инструкции)<br><br>
+• встаньте перед терминалом<br>
+• лицо должно быть освещено<br>
+• снимите очки и маску<br>
+• смотрите прямо в камеру
+</p>
+<button onclick="closeInstruction()">Понятно</button>
+</div>
+</div>
+
+<script>
+
+let userType=""
+let photoFile=null
+
+const btn=document.getElementById("removePhoto")
+if(btn) btn.classList.add("hidden")
+
+function selectUser(type){
+userType=type
+
+document.getElementById("step1").classList.add("hidden")
+document.getElementById("formStep").classList.remove("hidden")
+
+setTimeout(()=>{
+const fio=document.getElementById("fio")
+if(fio) fio.focus()
+},200)
+}
+
+function buildMessage(){
+
+const fio=document.getElementById("fio").value||""
+const dep=document.getElementById("department").value||""
+
+let text=""
+
+if(userType==="new"){
+text=`Здравствуйте. Прошу добавить фото для входа в офис.\n\nФИО: ${fio}\nПодразделение: ${dep}`
+}
+
+if(userType==="staff"){
+text=`Добрый день.\n\nФИО: ${fio}\nПодразделение: ${dep}\nПроблема с FaceID доступом.`
+}
+
+const msg=document.getElementById("message")
+if(msg) msg.value=text
+}
+
+function validateFio(){
+const fio=document.getElementById("fio").value.trim()
+return fio.split(/\s+/).length>=2
+}
+
+function triggerPhoto(camera){
+openInstruction()
+
+setTimeout(()=>{
+if(camera){
+document.getElementById("cameraInput").click()
+}else{
+document.getElementById("fileInput").click()
+}
+},300)
+}
+
+function handlePhoto(file){
+if(!file) return
+
+photoFile=file
+
+const img=document.getElementById("preview")
+const btn=document.getElementById("removePhoto")
+
+img.src=URL.createObjectURL(file)
+img.classList.remove("hidden")
+if(btn) btn.classList.remove("hidden")
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+const fio=document.getElementById("fio")
+const dep=document.getElementById("department")
+
+if(fio) fio.addEventListener("input",buildMessage)
+if(dep) dep.addEventListener("input",buildMessage)
+
+const cam=document.getElementById("cameraInput")
+const file=document.getElementById("fileInput")
+
+cam.addEventListener("change",e=>handlePhoto(e.target.files[0]))
+file.addEventListener("change",e=>handlePhoto(e.target.files[0]))
+
+buildMessage()
+
+})
+
+function openInstruction(){
+document.getElementById("photoInstruction").classList.remove("hidden")
+}
+
+function closeInstruction(){
+document.getElementById("photoInstruction").classList.add("hidden")
+}
+
+function getMsg(){
+return encodeURIComponent(document.getElementById("message").value||"")
+}
+
+async function sendEmail(){
+
+if(!validateFio()){
+alert("Введите имя и фамилию")
+return
+}
+
+const text=document.getElementById("message").value
+
+if(photoFile && navigator.canShare && navigator.canShare({files:[photoFile]})){
+try{
+await navigator.share({files:[photoFile],text:text})
+return
+}catch(e){}
+}
+
+window.location.href=`mailto:faceid@bcc.kz?subject=faceid%20сотруднику&body=${getMsg()}`
+}
+
+function removePhoto(){
+const img=document.getElementById("preview")
+const btn=document.getElementById("removePhoto")
+const cam=document.getElementById("cameraInput")
+const file=document.getElementById("fileInput")
+
+if(img){img.src="";img.classList.add("hidden")}
+if(btn) btn.classList.add("hidden")
+
+if(cam) cam.value=""
+if(file) file.value=""
+
+photoFile=null
+}
+
+function openSupport(){
+window.location.href="https://teams.microsoft.com/l/chat/0/0?users=faceid@bcc.kz,it.support@bcc.kz"
+}
+
+function resetForm(){
+
+const step1=document.getElementById("step1")
+const form=document.getElementById("formStep")
+
+const fio=document.getElementById("fio")
+const dep=document.getElementById("department")
+const msg=document.getElementById("message")
+const img=document.getElementById("preview")
+const btn=document.getElementById("removePhoto")
+
+if(fio) fio.value=""
+if(dep) dep.value=""
+if(msg) msg.value=""
+
+if(img) img.classList.add("hidden")
+
+photoFile=null
+userType=""
+
+form.classList.add("hidden")
+step1.classList.remove("hidden")
+
+if(btn) btn.classList.add("hidden")
+
+photoFile=null
+userType=""
+
+form.classList.add("hidden")
+step1.classList.remove("hidden")
+
+window.scrollTo({top:0,behavior:"smooth"})
+}
+
+</script>
+
+</body>
+</html>
